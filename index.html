@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f7f5f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<title>Handstand Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f7f5f2;--surface:#fff;--surface2:#efecea;--border:#e5e1dc;
+  --accent:#334155;--accent-light:#475569;--accent-bg:#f1f5f9;
+  --teal:#0d9488;--teal-bg:#e6f7f5;--teal-light:#5eead4;
+  --text:#1e1b18;--text2:#8c8580;--text3:#b5afa8;
+  --green:#16a34a;--green-bg:#dcfce7;
+  --orange:#ea580c;--orange-bg:#fff1e6;
+  --red:#dc2626;--red-bg:#fef2f2;
+  --blue:#2563eb;--blue-bg:#eff6ff;
+  --violet:#7c3aed;--violet-bg:#f5f3ff;
+  --radius:16px;--radius-sm:12px;
+}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;padding-bottom:80px;-webkit-tap-highlight-color:transparent;font-size:14px;letter-spacing:-.01em}
+.container{max-width:480px;margin:0 auto;padding:16px}
+
+/* Nav */
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);display:flex;justify-content:space-around;padding:8px 0 env(safe-area-inset-bottom,8px);z-index:100;border-top:1px solid var(--border);backdrop-filter:blur(20px);background:rgba(255,255,255,.92)}
+.nav button{background:none;border:none;color:var(--text3);font-size:10px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 20px;border-radius:10px;cursor:pointer;transition:.15s}
+.nav button.active{color:var(--accent)}
+.nav button svg{width:22px;height:22px}
+
+/* Header */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding:4px 0}
+.header h1{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.03em}
+.streak-badge{background:var(--accent);color:#fff;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px}
+
+/* Session pills */
+.session-pills{display:flex;gap:8px;margin-bottom:14px}
+.pill{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.pill .pill-label{font-size:12px;color:var(--text2);font-weight:500}
+.pill .pill-value{font-size:15px;font-weight:700;color:var(--text)}
+
+/* Bubbles */
+.bubbles-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.bubbles-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.bubble{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);color:var(--text3);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s}
+.bubble.done{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.bubble.active-bubble{border-color:var(--teal);color:var(--teal);background:var(--teal-bg);animation:pulse 1.5s infinite}
+.bubble.extra{border-style:dashed}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(13,148,136,.2)}50%{box-shadow:0 0 0 6px rgba(13,148,136,0)}}
+.add-extra{margin-top:10px;text-align:center}
+.add-extra button{background:none;border:1px dashed var(--border);border-radius:20px;padding:6px 16px;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer}
+.bubbles-label{font-size:12px;color:var(--text2);text-align:center;margin-bottom:10px;font-weight:500}
+
+/* Attempt detail */
+.attempt-detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.attempt-detail h3{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.detail-item{background:var(--bg);border-radius:10px;padding:8px 10px}
+.detail-item .di-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.detail-item .di-value{font-size:14px;font-weight:700;margin-top:2px}
+.detail-actions{display:flex;gap:8px;margin-top:10px}
+.detail-actions button{flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-delete{background:var(--red-bg);border:1px solid #fecaca;color:var(--red)}
+
+/* Form */
+.attempt-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.attempt-form h3{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.attempt-form h3 .num{background:var(--accent);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:7px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.duration-row{display:flex;align-items:center;gap:6px}
+.lessthan-toggle{width:38px;height:38px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text3);font-size:17px;font-weight:700;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lessthan-toggle.selected{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+.duration-input{display:flex;align-items:center;gap:6px}
+.duration-input input{width:68px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px;color:var(--text);font-size:18px;font-weight:700;text-align:center;-moz-appearance:textfield;font-family:inherit}
+.duration-input input::-webkit-inner-spin-button{-webkit-appearance:none}
+.duration-input input:focus{outline:none;border-color:var(--teal)}
+.duration-input span{color:var(--text2);font-size:13px;font-weight:500}
+.quick-btn{padding:9px 12px;border:1.5px solid var(--teal);border-radius:var(--radius-sm);background:var(--teal-bg);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap}
+.quick-btn:active{transform:scale(.95)}
+
+/* Kick scale - full width */
+.kick-wrapper{display:flex;flex-direction:column;gap:4px}
+.kick-labels{display:flex;justify-content:space-between;padding:0 2px}
+.kick-labels span{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.kick-scale{display:flex;gap:0}
+.kick-num{flex:1;height:44px;border:1.5px solid var(--border);background:var(--bg);color:var(--text2);font-size:16px;font-weight:700;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center}
+.kick-num:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
+.kick-num:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.kick-num:not(:first-child){border-left:0}
+.kick-num.k1{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.kick-num.k2{border-color:#eab308;background:#fefce8;color:#a16207}
+.kick-num.k3{border-color:var(--orange);background:var(--orange-bg);color:var(--orange)}
+.kick-num.k4{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.kick-num.k5{border-color:#7c3aed;background:#f5f3ff;color:#7c3aed}
+
+/* Toggle buttons */
+.yn-group{display:flex;gap:6px}
+.yn-btn{flex:1;padding:10px 6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;text-align:center}
+.yn-btn.selected.yes,.yn-btn.selected.ctrl{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.yn-btn.selected.no,.yn-btn.selected.unctrl{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.yn-btn.selected.kinda{border-color:#eab308;color:#a16207;background:#fefce8}
+.yn-btn.selected.bailed{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+.yn-btn.selected.under{border-color:var(--violet);color:var(--violet);background:var(--violet-bg)}
+.yn-btn.selected.over{border-color:var(--orange);color:var(--orange);background:var(--orange-bg)}
+
+.clean-group{display:flex;gap:6px}
+.clean-btn{flex:1;padding:9px 6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;text-align:center}
+.clean-btn.selected.perfect{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.clean-btn.selected.decent{border-color:#eab308;color:#a16207;background:#fefce8}
+.clean-btn.selected.garbage{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+
+/* Max hold toggle */
+.maxhold-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px}
+.maxhold-row label{font-size:12px;color:var(--text2);font-weight:600}
+.toggle-switch{position:relative;width:44px;height:24px;cursor:pointer;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--border);border-radius:12px;transition:.2s}
+.toggle-track:after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle-switch input:checked+.toggle-track{background:var(--teal)}
+.toggle-switch input:checked+.toggle-track:after{left:23px}
+
+/* Primary button */
+.btn-primary{width:100%;padding:14px;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;margin-top:10px;letter-spacing:-.01em}
+.btn-primary:active{transform:scale(.98);background:var(--accent-light)}
+
+/* ═══ STATS ═══ */
+.stats-row{display:flex;justify-content:space-between;padding:12px 4px 14px;margin-bottom:6px}
+.stat-item{text-align:center;flex:1}
+.stat-item .si-val{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--text)}
+.stat-item .si-unit{font-size:11px;font-weight:500;color:var(--text3)}
+.stat-item .si-lbl{font-size:9px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.stat-item+.stat-item{border-left:1px solid var(--border)}
+
+/* Chart select */
+.chart-select-wrap{position:relative;margin-bottom:14px}
+.chart-select{width:100%;appearance:none;-webkit-appearance:none;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 40px 12px 14px;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:.15s}
+.chart-select:focus{outline:none;border-color:var(--teal)}
+.chart-select-arrow{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text3)}
+.chart-panel{display:none}
+.chart-panel.active{display:block}
+.chart-area{padding:4px 0}
+.chart-container{position:relative;height:240px}
+canvas{width:100%!important;height:100%!important}
+
+/* History */
+.history-session{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;cursor:pointer;transition:.15s}
+.history-session:active{transform:scale(.98)}
+.hs-header{display:flex;justify-content:space-between;align-items:center}
+.hs-date{font-size:14px;font-weight:700}
+.hs-count{font-size:12px;color:var(--text2);font-weight:600}
+.hs-stats{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
+.hs-stat{font-size:12px;color:var(--text2);font-weight:500}
+.hs-stat b{color:var(--text);font-weight:700}
+.hs-detail{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:none}
+.hs-detail.open{display:block}
+.hs-attempt{background:var(--bg);border-radius:10px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;gap:10px;font-size:13px}
+.hs-attempt .ha-num{width:22px;height:22px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.hs-attempt .ha-dur{font-weight:700;min-width:36px}
+.ha-tags{display:flex;gap:3px;flex-wrap:wrap;flex:1}
+.ha-tag{font-size:10px;padding:2px 6px;border-radius:5px;font-weight:600}
+.ha-tag.t-green{background:var(--green-bg);color:var(--green)}
+.ha-tag.t-orange{background:var(--orange-bg);color:var(--orange)}
+.ha-tag.t-red{background:var(--red-bg);color:var(--red)}
+.ha-tag.t-blue{background:var(--blue-bg);color:var(--blue)}
+.ha-tag.t-gray{background:var(--surface2);color:var(--text2)}
+.ha-tag.t-teal{background:var(--teal-bg);color:var(--teal)}
+
+.page{display:none}.page.active{display:block}
+.empty{text-align:center;padding:40px 20px;color:var(--text2)}.empty p{font-size:14px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--accent);color:#fff;padding:10px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;z-index:200;transition:.3s}
+.toast.show{transform:translateX(-50%) translateY(0)}
+::-webkit-scrollbar{width:0}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<div id="page-log" class="page active">
+<div class="container">
+  <div class="header">
+    <h1>Handstands</h1>
+    <div class="streak-badge" id="streak-badge"><span id="streak-count">0</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/></svg></div>
+  </div>
+  <div class="session-pills">
+    <div class="pill"><span class="pill-value" id="session-date"></span></div>
+    <div class="pill"><span class="pill-value" id="attempt-count">0</span><span class="pill-label">/10 att.</span></div>
+  </div>
+  <div id="bubbles-area"></div>
+  <div id="detail-area"></div>
+  <div id="attempt-form-area"></div>
+</div>
+</div>
+
+<div id="page-stats" class="page">
+<div class="container">
+  <div class="header"><h1>Stats</h1></div>
+  <div id="stats-content"></div>
+</div>
+</div>
+
+<div id="page-history" class="page">
+<div class="container">
+  <div class="header"><h1>History</h1></div>
+  <div id="history-content"></div>
+</div>
+</div>
+
+<nav class="nav">
+  <button class="active" onclick="switchPage('log')" id="nav-log">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Log
+  </button>
+  <button onclick="switchPage('stats')" id="nav-stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Stats
+  </button>
+  <button onclick="switchPage('history')" id="nav-history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>History
+  </button>
+</nav>
+
+<script>
+const DB_NAME='handstand-tracker',DB_VERSION=1,DEFAULT_COUNT=10;
+let db;
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('sessions'))d.createObjectStore('sessions',{keyPath:'date'})};r.onsuccess=e=>{db=e.target.result;res(db)};r.onerror=rej})}
+function getSession(d){return new Promise((res,rej)=>{const tx=db.transaction('sessions','readonly'),r=tx.objectStore('sessions').get(d);r.onsuccess=()=>res(r.result||null);r.onerror=rej})}
+function saveSession(s){return new Promise((res,rej)=>{const tx=db.transaction('sessions','readwrite');tx.objectStore('sessions').put(s);tx.oncomplete=()=>res();tx.onerror=rej})}
+function getAllSessions(){return new Promise((res,rej)=>{const tx=db.transaction('sessions','readonly'),r=tx.objectStore('sessions').getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=rej})}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function formatDate(s){return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}
+function formatDateShort(s){return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
+function daysBetween(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5)}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+function shortDate(s){const d=new Date(s+'T12:00:00');return(d.getMonth()+1)+'/'+d.getDate()}
+function isSuccess(a){if(a.exitType)return a.exitType==='controlled'||a.exitType==='bailed';return a.controlledFall!==undefined?a.controlledFall:!!a.balancedFall}
+function isQuiet(a){return a.quietBalance==='yes'||a.quietBalance===true}
+
+let currentSession=null,formState={duration:'',lessThan:false,kick:0,exitType:'',exitDir:'',quietBalance:'',clean:'',maxHold:false},viewingAttempt=null,totalSlots=DEFAULT_COUNT;
+
+function switchPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.getElementById('nav-'+p).classList.add('active');if(p==='stats')renderStats();if(p==='history')renderHistory()}
+
+// ═══════════ LOG ═══════════
+async function initLog(){
+  const today=todayStr();
+  document.getElementById('session-date').textContent=formatDateShort(today);
+  currentSession=await getSession(today);
+  if(!currentSession){
+    const all=await getAllSessions();
+    const prev=all.filter(s=>s.attempts.length>0&&s.date<today).sort((a,b)=>b.date.localeCompare(a.date));
+    currentSession={date:today,attempts:[],daysSinceLastSession:prev.length?daysBetween(prev[0].date,today):null};
+    await saveSession(currentSession);
+  }
+  totalSlots=Math.max(DEFAULT_COUNT,currentSession.attempts.length);
+  viewingAttempt=null;renderLog();renderStreak();
+}
+
+function renderLog(){
+  document.getElementById('attempt-count').textContent=currentSession.attempts.length;
+  totalSlots=Math.max(DEFAULT_COUNT,currentSession.attempts.length);
+  renderBubbles();
+  if(viewingAttempt!==null&&viewingAttempt<=currentSession.attempts.length){
+    renderAttemptDetail(viewingAttempt);document.getElementById('attempt-form-area').innerHTML='';
+  } else {document.getElementById('detail-area').innerHTML='';viewingAttempt=null;renderAttemptForm()}
+}
+
+function renderBubbles(){
+  const done=currentSession.attempts.length,formActive=viewingAttempt===null;
+  let h='<div class="bubbles-card">';
+  h+=`<div class="bubbles-label">${done} of ${DEFAULT_COUNT}${done>DEFAULT_COUNT?' (+'+(done-DEFAULT_COUNT)+' extra)':''}</div>`;
+  h+='<div class="bubbles-row">';
+  for(let i=1;i<=totalSlots;i++){
+    let cls='bubble';
+    if(i<=done)cls+=' done';
+    else if(i===done+1&&formActive)cls+=' active-bubble';
+    if(i>DEFAULT_COUNT)cls+=' extra';
+    const oc=i<=done?`onclick="viewAttempt(${i})"`:`onclick="showForm()"`;
+    h+=`<div class="${cls}" ${oc}>${i}</div>`;
+  }
+  h+='</div>';
+  if(done>=totalSlots)h+='<div class="add-extra"><button onclick="addExtraSlot()">+ Add extra</button></div>';
+  h+='</div>';
+  document.getElementById('bubbles-area').innerHTML=h;
+}
+
+function viewAttempt(n){viewingAttempt=n;renderLog()}
+function showForm(){viewingAttempt=null;renderLog()}
+function addExtraSlot(){totalSlots++;viewingAttempt=null;renderLog()}
+
+function renderAttemptDetail(num){
+  const a=currentSession.attempts.find(x=>x.num===num);
+  if(!a){viewingAttempt=null;renderLog();return}
+  const kN=typeof a.kick==='number'?a.kick:3;
+  const exit=a.exitType==='bailed'?'Bailed at target':a.exitType==='controlled'?'Controlled':'Uncontrolled';
+  const dir=a.exitType!=='bailed'&&a.exitDir?(a.exitDir==='under'?'Underbalance':'Overbalance'):'—';
+  const quiet=isQuiet(a)?'Yes':a.quietBalance==='kinda'?'Kind of':'No';
+  const clean=a.clean?a.clean[0].toUpperCase()+a.clean.slice(1):'—';
+  const mh=a.maxHold?'<div class="detail-item" style="grid-column:span 2;background:var(--teal-bg);border:1px solid var(--teal)"><div class="di-label" style="color:var(--teal)">Max hold attempt</div></div>':'';
+  document.getElementById('detail-area').innerHTML=`
+    <div class="attempt-detail">
+      <h3><span>Attempt #${a.num}</span><button style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;line-height:1" onclick="showForm()">&times;</button></h3>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="di-label">Duration</div><div class="di-value">${a.lessThan?'< ':''}${a.duration}s</div></div>
+        <div class="detail-item"><div class="di-label">Kick</div><div class="di-value">${kN} / 5</div></div>
+        <div class="detail-item"><div class="di-label">Exit</div><div class="di-value">${exit}</div></div>
+        <div class="detail-item"><div class="di-label">Direction</div><div class="di-value">${dir}</div></div>
+        <div class="detail-item"><div class="di-label">Quiet balance</div><div class="di-value">${quiet}</div></div>
+        <div class="detail-item"><div class="di-label">Clean</div><div class="di-value">${clean}</div></div>
+        ${mh}
+      </div>
+      <div class="detail-actions"><button class="btn-delete" onclick="deleteAttempt(${a.num})">Delete</button></div>
+    </div>`;
+}
+
+function renderAttemptForm(){
+  const num=currentSession.attempts.length+1;
+  if(num>totalSlots){document.getElementById('attempt-form-area').innerHTML='';return}
+  const kickBtns=[1,2,3,4,5].map(n=>`<div class="kick-num ${formState.kick===n?'k'+n+' selected':''}" onclick="setKick(${n})">${n}</div>`).join('');
+  const showDir=formState.exitType&&formState.exitType!=='bailed';
+  const dirHtml=showDir?`<div class="field"><label>Exit direction</label><div class="yn-group">
+    <div class="yn-btn under ${formState.exitDir==='under'?'selected':''}" onclick="setDir('under')">Underbalance</div>
+    <div class="yn-btn over ${formState.exitDir==='over'?'selected':''}" onclick="setDir('over')">Overbalance</div>
+  </div></div>`:'';
+  document.getElementById('attempt-form-area').innerHTML=`
+    <div class="attempt-form">
+      <h3><span>Attempt</span><span class="num">${num}</span></h3>
+      <div class="field"><label>Hold duration</label>
+        <div class="duration-row">
+          <div class="lessthan-toggle ${formState.lessThan?'selected':''}" onclick="toggleLT()">&le;</div>
+          <div class="duration-input"><input type="number" id="f-dur" inputmode="decimal" placeholder="0" min="0" max="999" step="0.1" value="${formState.duration}"><span>sec</span></div>
+          <div class="quick-btn" onclick="setQD(10)">10s</div>
+        </div>
+      </div>
+      <div class="field"><label>Kick-up strength</label>
+        <div class="kick-wrapper">
+          <div class="kick-labels"><span>Soft</span><span>Hard</span></div>
+          <div class="kick-scale">${kickBtns}</div>
+        </div>
+      </div>
+      <div class="field"><label>Exit type</label><div class="yn-group">
+        <div class="yn-btn ctrl ${formState.exitType==='controlled'?'selected':''}" onclick="setExit('controlled')">Controlled</div>
+        <div class="yn-btn unctrl ${formState.exitType==='uncontrolled'?'selected':''}" onclick="setExit('uncontrolled')">Uncontrolled</div>
+        <div class="yn-btn bailed ${formState.exitType==='bailed'?'selected':''}" onclick="setExit('bailed')">Bailed</div>
+      </div></div>
+      ${dirHtml}
+      <div class="field"><label>Quiet balance found?</label><div class="yn-group">
+        <div class="yn-btn yes ${formState.quietBalance==='yes'?'selected':''}" onclick="setQB('yes')">Yes</div>
+        <div class="yn-btn kinda ${formState.quietBalance==='kinda'?'selected':''}" onclick="setQB('kinda')">Kind of</div>
+        <div class="yn-btn no ${formState.quietBalance==='no'?'selected':''}" onclick="setQB('no')">No</div>
+      </div></div>
+      <div class="field"><label>Clean (optional)</label><div class="clean-group">
+        <div class="clean-btn perfect ${formState.clean==='perfect'?'selected':''}" onclick="setClean('perfect')">Perfect</div>
+        <div class="clean-btn decent ${formState.clean==='decent'?'selected':''}" onclick="setClean('decent')">Decent</div>
+        <div class="clean-btn garbage ${formState.clean==='garbage'?'selected':''}" onclick="setClean('garbage')">Garbage</div>
+      </div></div>
+      <div class="maxhold-row"><label>Max hold attempt</label><label class="toggle-switch"><input type="checkbox" id="f-maxhold" ${formState.maxHold?'checked':''} onchange="toggleMaxHold()"><span class="toggle-track"></span></label></div>
+      <button class="btn-primary" onclick="logAttempt()">Log #${num}</button>
+    </div>`;
+  document.getElementById('f-dur').addEventListener('input',e=>{formState.duration=e.target.value});
+}
+
+function setKick(v){formState.kick=v;renderAttemptForm()}
+function setExit(v){formState.exitType=v;if(v==='bailed')formState.exitDir='';renderAttemptForm()}
+function setDir(v){formState.exitDir=v;renderAttemptForm()}
+function setQB(v){formState.quietBalance=v;renderAttemptForm()}
+function setClean(v){formState.clean=formState.clean===v?'':v;renderAttemptForm()}
+function toggleLT(){formState.lessThan=!formState.lessThan;renderAttemptForm()}
+function setQD(v){formState.duration=v;renderAttemptForm()}
+function toggleMaxHold(){formState.maxHold=!formState.maxHold}
+
+async function logAttempt(){
+  const dur=parseFloat(formState.duration);
+  if(!dur||dur<=0){showToast('Enter a duration');return}
+  if(!formState.kick){showToast('Select kick strength');return}
+  if(!formState.exitType){showToast('Select exit type');return}
+  if(formState.exitType!=='bailed'&&!formState.exitDir){showToast('Select exit direction');return}
+  if(!formState.quietBalance){showToast('Select quiet balance');return}
+  currentSession.attempts.push({num:currentSession.attempts.length+1,duration:dur,lessThan:formState.lessThan,kick:formState.kick,exitType:formState.exitType,exitDir:formState.exitDir||'',quietBalance:formState.quietBalance,clean:formState.clean||'',maxHold:formState.maxHold||false,time:new Date().toISOString()});
+  await saveSession(currentSession);
+  formState={duration:'',lessThan:false,kick:0,exitType:'',exitDir:'',quietBalance:'',clean:'',maxHold:false};
+  viewingAttempt=null;renderLog();renderStreak();
+  showToast(`#${currentSession.attempts.length} logged`);
+}
+
+async function deleteAttempt(num){
+  currentSession.attempts=currentSession.attempts.filter(a=>a.num!==num);
+  currentSession.attempts.forEach((a,i)=>a.num=i+1);
+  await saveSession(currentSession);viewingAttempt=null;renderLog();
+}
+
+async function renderStreak(){
+  const sessions=await getAllSessions();
+  const dates=new Set(sessions.filter(s=>s.attempts.length>0).map(s=>s.date));
+  let streak=0,d=new Date();
+  if(dates.has(d.toISOString().slice(0,10))){streak=1;d.setDate(d.getDate()-1)}
+  while(dates.has(d.toISOString().slice(0,10))){streak++;d.setDate(d.getDate()-1)}
+  document.getElementById('streak-count').textContent=streak;
+  document.getElementById('streak-badge').style.display=streak>0?'flex':'none';
+}
+
+// ═══════════ STATS ═══════════
+let activeChart=0;
+const chartDefs=[
+  {id:'kickdist',label:'Kick Dist.',title:'Kick-up Distribution',desc:'Last 5 sessions. You want a tight bell around 3.'},
+  {id:'timeline',label:'Timeline',title:'Attempt Timeline',desc:'Last session. Dot size = hold time. Color = quality.'},
+  {id:'quality',label:'Quality',title:'Quality Ratio',desc:'Clean holds (perfect + decent) / total per session.'},
+  {id:'rolling',label:'Success',title:'Rolling 5-Session Success',desc:'Smoothed success rate. Your real progression signal.'},
+  {id:'kickcal',label:'Calibration',title:'Kick Calibration',desc:'Avg kick score converging to 3.0 with lower std dev = progress.'},
+  {id:'quiet',label:'Quiet Bal.',title:'Quiet Balance Rate',desc:'Rolling 5-session avg. The single most important metric.'},
+  {id:'restday',label:'Rest Days',title:'Rest Day Impact',desc:'Days off vs next session success. Find your optimal rest.'},
+  {id:'calendar',label:'Calendar',title:'Consistency',desc:'Training heatmap colored by session quality.'},
+];
+
+async function renderStats(){
+  const sessions=await getAllSessions();
+  const S=sessions.filter(s=>s.attempts.length>0).sort((a,b)=>a.date.localeCompare(b.date));
+  const el=document.getElementById('stats-content');
+  if(!S.length){el.innerHTML='<div class="empty"><p>No data yet.</p></div>';return}
+  const A=S.flatMap(s=>s.attempts),tA=A.length;
+  // Max hold avg: average of each session's longest attempt
+  const maxHolds=S.map(s=>Math.max(...s.attempts.map(a=>a.duration)));
+  const avgMax=(maxHolds.reduce((a,b)=>a+b,0)/maxHolds.length).toFixed(1);
+  const quietPct=Math.round(A.filter(isQuiet).length/tA*100);
+  const successPct=Math.round(A.filter(isSuccess).length/tA*100);
+  const cleanPct=Math.round(A.filter(a=>a.clean==='perfect'||a.clean==='decent').length/tA*100);
+
+  let html=`<div class="stats-row">
+    <div class="stat-item"><div class="si-val">${avgMax}<span class="si-unit">s</span></div><div class="si-lbl">Avg max</div></div>
+    <div class="stat-item"><div class="si-val">${successPct}<span class="si-unit">%</span></div><div class="si-lbl">Success</div></div>
+    <div class="stat-item"><div class="si-val">${quietPct}<span class="si-unit">%</span></div><div class="si-lbl">Quiet</div></div>
+    <div class="stat-item"><div class="si-val">${cleanPct}<span class="si-unit">%</span></div><div class="si-lbl">Clean</div></div>
+  </div>`;
+
+  // Chart dropdown
+  html+='<div class="chart-select-wrap"><select class="chart-select" id="chart-select" onchange="switchChart(+this.value)">';
+  chartDefs.forEach((c,i)=>html+=`<option value="${i}" ${i===activeChart?'selected':''}>${c.title}</option>`);
+  html+='</select><div class="chart-select-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div></div>';
+
+  // Chart panels
+  chartDefs.forEach((c,i)=>{
+    html+=`<div class="chart-panel ${i===activeChart?'active':''}" id="panel-${c.id}">
+      <div class="chart-area">
+        <div class="${c.id==='calendar'?'':'chart-container'}" id="cc-${c.id}"></div>
+      </div></div>`;
+  });
+
+  el.innerHTML=html;
+  drawAllCharts(S);
+}
+
+function switchChart(i){
+  activeChart=i;
+  document.querySelectorAll('.chart-panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  // Redraw active chart since canvas might not have rendered when hidden
+  getAllSessions().then(sessions=>{
+    const S=sessions.filter(s=>s.attempts.length>0).sort((a,b)=>a.date.localeCompare(b.date));
+    if(S.length)redrawChart(i,S);
+  });
+}
+
+function drawAllCharts(S){
+  // Only draw the currently active chart (hidden panels have 0 dimensions)
+  redrawChart(activeChart,S);
+}
+
+function redrawChart(idx,S){
+  const rec=S.slice(-14);
+  const id=chartDefs[idx].id;
+  // Clear existing canvas
+  const container=document.getElementById('cc-'+id);
+  if(!container)return;
+  container.innerHTML='';
+  if(idx===0){
+    const last5=S.slice(-5),kc=[0,0,0,0,0];
+    last5.flatMap(s=>s.attempts).forEach(a=>{const k=typeof a.kick==='number'?a.kick:3;if(k>=1&&k<=5)kc[k-1]++});
+    drawBar('cc-kickdist',['1','2','3','4','5'],kc,['#16a34a','#4ade80','#0d9488','#ea580c','#dc2626']);
+  } else if(idx===1){
+    drawTimeline('cc-timeline',S[S.length-1].attempts);
+  } else if(idx===2){
+    const ql=rec.map(s=>shortDate(s.date)),qd=rec.map(s=>{const c=s.attempts.filter(a=>a.clean==='perfect'||a.clean==='decent').length;return s.attempts.length?Math.round(c/s.attempts.length*100):0});
+    drawLine('cc-quality',ql,[{data:qd,color:'#0d9488',label:'Clean %'}],'%');
+  } else if(idx===3){
+    const rl=[],rd=[];
+    for(let i=4;i<S.length;i++){const w=S.slice(i-4,i+1).flatMap(s=>s.attempts);rl.push(shortDate(S[i].date));rd.push(w.length?Math.round(w.filter(isSuccess).length/w.length*100):0)}
+    if(rl.length)drawLine('cc-rolling',rl,[{data:rd,color:'#334155',label:'Success %'}],'%');
+  } else if(idx===4){
+    const ka=rec.map(s=>(s.attempts.reduce((sum,a)=>sum+(typeof a.kick==='number'?a.kick:3),0)/s.attempts.length).toFixed(2));
+    const ks=rec.map(s=>{const k=s.attempts.map(a=>typeof a.kick==='number'?a.kick:3),m=k.reduce((a,b)=>a+b,0)/k.length;return Math.sqrt(k.reduce((a,b)=>a+(b-m)**2,0)/k.length).toFixed(2)});
+    drawLine('cc-kickcal',rec.map(s=>shortDate(s.date)),[{data:ka,color:'#334155',label:'Avg kick'},{data:ks,color:'#dc2626',label:'Std dev'}],'');
+  } else if(idx===5){
+    const qbl=[],qbd=[];
+    for(let i=0;i<S.length;i++){const w=S.slice(Math.max(0,i-4),i+1).flatMap(s=>s.attempts);qbl.push(shortDate(S[i].date));qbd.push(w.length?Math.round(w.filter(isQuiet).length/w.length*100):0)}
+    drawLine('cc-quiet',qbl.slice(-14),[{data:qbd.slice(-14),color:'#16a34a',label:'Quiet % (5-session)'}],'%');
+  } else if(idx===6){
+    drawScatter('cc-restday',S);
+  } else if(idx===7){
+    drawHeatmap('cc-calendar',S);
+  }
+}
+
+function getCanvas(id){
+  const c=document.getElementById(id);if(!c)return null;
+  const cvs=document.createElement('canvas');c.appendChild(cvs);
+  const dpr=window.devicePixelRatio||1,rect=c.getBoundingClientRect();
+  cvs.width=rect.width*dpr;cvs.height=rect.height*dpr;
+  cvs.style.width=rect.width+'px';cvs.style.height=rect.height+'px';
+  const ctx=cvs.getContext('2d');ctx.scale(dpr,dpr);
+  return{ctx,W:rect.width,H:rect.height};
+}
+
+function drawLine(id,labels,datasets,unit){
+  const r=getCanvas(id);if(!r)return;const{ctx,W,H}=r;
+  const pad={top:24,right:12,bottom:28,left:38},cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+  const allV=datasets.flatMap(d=>d.data.map(Number)),maxV=Math.max(...allV,1)*1.15;
+  ctx.strokeStyle='#e5e1dc';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.top+(cH/4)*i;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();ctx.fillStyle='#b5afa8';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(maxV-(maxV/4)*i)+unit,pad.left-5,y+3)}
+  ctx.fillStyle='#b5afa8';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='center';
+  const step=Math.max(1,Math.floor(labels.length/6));
+  labels.forEach((l,i)=>{if(i%step===0||i===labels.length-1)ctx.fillText(l,pad.left+(i/(labels.length-1||1))*cW,H-6)});
+  datasets.forEach(ds=>{
+    // Area fill
+    ctx.globalAlpha=.08;ctx.fillStyle=ds.color;ctx.beginPath();
+    ds.data.forEach((v,i)=>{const x=pad.left+(i/(ds.data.length-1||1))*cW,y=pad.top+cH-(Number(v)/maxV)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+    ctx.lineTo(pad.left+cW,pad.top+cH);ctx.lineTo(pad.left,pad.top+cH);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+    // Line
+    ctx.strokeStyle=ds.color;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.beginPath();
+    ds.data.forEach((v,i)=>{const x=pad.left+(i/(ds.data.length-1||1))*cW,y=pad.top+cH-(Number(v)/maxV)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();
+    // Dots
+    ds.data.forEach((v,i)=>{const x=pad.left+(i/(ds.data.length-1||1))*cW,y=pad.top+cH-(Number(v)/maxV)*cH;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();ctx.fillStyle=ds.color;ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill()});
+  });
+  if(datasets.length>1){let lx=pad.left;datasets.forEach(ds=>{ctx.fillStyle=ds.color;ctx.beginPath();ctx.arc(lx+5,12,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#8c8580';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='left';ctx.fillText(ds.label,lx+12,15);lx+=ctx.measureText(ds.label).width+24})}
+}
+
+function drawBar(id,labels,values,colors){
+  const r=getCanvas(id);if(!r)return;const{ctx,W,H}=r;
+  const pad={top:10,right:12,bottom:30,left:38},cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+  const maxV=Math.max(...values,1)*1.2,gap=cW/labels.length,barW=gap*0.55;
+  ctx.strokeStyle='#e5e1dc';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.top+(cH/4)*i;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();ctx.fillStyle='#b5afa8';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(maxV-(maxV/4)*i),pad.left-5,y+3)}
+  labels.forEach((l,i)=>{
+    const x=pad.left+i*gap+gap/2,h=(values[i]/maxV)*cH;
+    ctx.fillStyle=colors[i];ctx.beginPath();
+    roundRect(ctx,x-barW/2,pad.top+cH-h,barW,h,6);ctx.fill();
+    ctx.fillStyle='#8c8580';ctx.font='600 12px Inter,sans-serif';ctx.textAlign='center';ctx.fillText(l,x,H-8);
+    if(values[i]>0){ctx.fillStyle=colors[i];ctx.font='700 12px Inter,sans-serif';ctx.fillText(values[i],x,pad.top+cH-h-6)}
+  });
+}
+
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()}
+
+function drawTimeline(id,attempts){
+  const r=getCanvas(id);if(!r)return;const{ctx,W,H}=r;
+  const pad={top:30,right:20,bottom:28,left:20},cW=W-pad.left-pad.right,cy=H/2;
+  ctx.strokeStyle='#e5e1dc';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(pad.left,cy);ctx.lineTo(W-pad.right,cy);ctx.stroke();ctx.setLineDash([]);
+  if(!attempts.length)return;
+  const maxD=Math.max(...attempts.map(a=>a.duration),1);
+  attempts.forEach((a,i)=>{
+    const x=pad.left+(i/(attempts.length-1||1))*cW;
+    const radius=Math.max(8,Math.min(20,(a.duration/maxD)*20));
+    let color=a.clean==='perfect'?'#16a34a':a.clean==='decent'?'#0d9488':a.clean==='garbage'?'#dc2626':a.exitType==='controlled'||a.exitType==='bailed'?'#16a34a':a.exitType==='uncontrolled'?'#dc2626':'#8c8580';
+    ctx.fillStyle=color;ctx.globalAlpha=.15;ctx.beginPath();ctx.arc(x,cy,radius+3,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;ctx.beginPath();ctx.arc(x,cy,radius,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='700 9px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(a.duration+(a.lessThan?'~':''),x,cy);
+    ctx.textBaseline='alphabetic';ctx.fillStyle='#8c8580';ctx.font='500 10px Inter,sans-serif';ctx.fillText('#'+a.num,x,H-8);
+  });
+}
+
+function drawScatter(id,sessions){
+  const r=getCanvas(id);if(!r)return;const{ctx,W,H}=r;
+  const pad={top:16,right:16,bottom:28,left:42},cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+  const pts=[];
+  for(let i=1;i<sessions.length;i++){
+    const s=sessions[i];let dOff=s.daysSinceLastSession;
+    if(dOff==null)dOff=daysBetween(sessions[i-1].date,s.date);
+    if(dOff<1)continue;
+    const rate=s.attempts.length?Math.round(s.attempts.filter(isSuccess).length/s.attempts.length*100):0;
+    pts.push({x:dOff,y:rate});
+  }
+  if(!pts.length){ctx.fillStyle='#b5afa8';ctx.font='500 13px Inter,sans-serif';ctx.textAlign='center';ctx.fillText('Need more sessions',W/2,H/2);return}
+  const maxX=Math.max(...pts.map(p=>p.x),2);
+  ctx.strokeStyle='#e5e1dc';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.top+(cH/4)*i;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();ctx.fillStyle='#b5afa8';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(100-25*i)+'%',pad.left-5,y+3)}
+  for(let d=1;d<=maxX;d++){ctx.fillStyle='#b5afa8';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText(d+'d',pad.left+((d-.5)/maxX)*cW,H-8)}
+  pts.forEach(p=>{
+    const x=pad.left+((p.x-.5)/maxX)*cW,y=pad.top+cH-(p.y/100)*cH;
+    ctx.fillStyle='#334155';ctx.globalAlpha=.12;ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;ctx.fillStyle='#334155';ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+  });
+}
+
+function drawHeatmap(id,sessions){
+  const el=document.getElementById(id);if(!el)return;
+  const dateMap={};
+  sessions.forEach(s=>{if(!s.attempts.length)return;const cR=s.attempts.filter(a=>a.clean==='perfect'||a.clean==='decent').length/s.attempts.length;const qR=s.attempts.filter(isQuiet).length/s.attempts.length;dateMap[s.date]=(cR+qR)/2});
+  const today=new Date(),startDay=new Date(today);startDay.setDate(startDay.getDate()-16*7+1);
+  while(startDay.getDay()!==1)startDay.setDate(startDay.getDate()-1);
+  const dayLbl=['','M','','W','','F',''];
+  let h='<div style="display:flex;gap:2px">';
+  h+='<div style="display:flex;flex-direction:column;gap:2px;margin-right:2px">';
+  dayLbl.forEach(l=>h+=`<div style="width:16px;height:14px;font-size:9px;color:var(--text3);display:flex;align-items:center;justify-content:end;font-weight:500">${l}</div>`);
+  h+='</div>';
+  const d=new Date(startDay);let prevM=-1;const mh=[];let wi=0;
+  while(d<=today){
+    const ws=new Date(d);let col='<div style="display:flex;flex-direction:column;gap:2px">';
+    for(let dow=0;dow<7;dow++){
+      const ds=d.toISOString().slice(0,10),val=dateMap[ds];
+      let bg=d>today?'transparent':val===undefined?'var(--surface2)':val>=.6?'#16a34a':val>=.3?'#86efac':val>=0?'#0d948840':'var(--surface2)';
+      col+=`<div style="width:14px;height:14px;border-radius:3px;background:${bg}" title="${ds}"></div>`;
+      d.setDate(d.getDate()+1);
+    }
+    col+='</div>';h+=col;
+    const m=ws.getMonth();if(m!==prevM){mh.push({idx:wi,label:ws.toLocaleDateString('en-US',{month:'short'})});prevM=m}wi++;
+  }
+  h+='</div>';
+  h+='<div style="display:flex;gap:2px;margin-left:20px;margin-top:4px">';
+  let mi=0;for(let w=0;w<wi;w++){if(mi<mh.length&&mh[mi].idx===w){h+=`<div style="width:16px;font-size:9px;color:var(--text3);font-weight:500">${mh[mi].label}</div>`;mi++}else h+='<div style="width:16px"></div>'}
+  h+='</div>';
+  h+='<div style="display:flex;gap:6px;align-items:center;margin-top:10px;justify-content:center">';
+  h+='<span style="font-size:10px;color:var(--text3);font-weight:500">Low</span>';
+  ['var(--surface2)','#0d948840','#86efac','#16a34a'].forEach(c=>h+=`<div style="width:12px;height:12px;border-radius:3px;background:${c}"></div>`);
+  h+='<span style="font-size:10px;color:var(--text3);font-weight:500">High</span></div>';
+  el.innerHTML=h;
+}
+
+// ═══════════ HISTORY ═══════════
+async function renderHistory(){
+  const sessions=await getAllSessions();
+  const S=sessions.filter(s=>s.attempts.length>0).sort((a,b)=>b.date.localeCompare(a.date));
+  const el=document.getElementById('history-content');
+  if(!S.length){el.innerHTML='<div class="empty"><p>No sessions yet.</p></div>';return}
+  el.innerHTML=S.map(s=>{
+    const avg=(s.attempts.reduce((sum,a)=>sum+a.duration,0)/s.attempts.length).toFixed(1);
+    const best=Math.max(...s.attempts.map(a=>a.duration));
+    const qC=s.attempts.filter(isQuiet).length;
+    const rest=s.daysSinceLastSession!=null?' | <b>'+s.daysSinceLastSession+'d</b> rest':'';
+    return `<div class="history-session" onclick="toggleDetail('${s.date}')">
+      <div class="hs-header"><span class="hs-date">${formatDate(s.date)}</span><span class="hs-count">${s.attempts.length} att.</span></div>
+      <div class="hs-stats">
+        <span class="hs-stat">Avg <b>${avg}s</b></span>
+        <span class="hs-stat">Best <b>${best}s</b></span>
+        <span class="hs-stat">Quiet <b>${qC}/${s.attempts.length}</b>${rest}</span>
+      </div>
+      <div class="hs-detail" id="detail-${s.date}">${s.attempts.map(a=>{
+        const kN=typeof a.kick==='number'?a.kick:3,kCls=kN<=2?'t-green':kN===3?'t-teal':'t-red';
+        let ex='';if(a.exitType==='bailed')ex='<span class="ha-tag t-blue">Bailed</span>';else if(a.exitType==='controlled')ex='<span class="ha-tag t-green">Ctrl</span>';else if(a.exitType==='uncontrolled')ex='<span class="ha-tag t-red">Unctrl</span>';else{const cf=a.controlledFall!==undefined?a.controlledFall:a.balancedFall;ex=`<span class="ha-tag ${cf?'t-green':'t-red'}">${cf?'Ctrl':'Unctrl'}</span>`}
+        const dir=a.exitDir?`<span class="ha-tag t-gray">${a.exitDir==='under'?'U':'O'}</span>`:'';
+        const q=isQuiet(a)?'<span class="ha-tag t-green">Q</span>':a.quietBalance==='kinda'?'<span class="ha-tag t-orange">Q~</span>':'';
+        const cl=a.clean==='perfect'?'<span class="ha-tag t-green">P</span>':a.clean==='decent'?'<span class="ha-tag t-teal">D</span>':a.clean==='garbage'?'<span class="ha-tag t-red">G</span>':'';
+        const mh=a.maxHold?'<span class="ha-tag t-teal" style="font-weight:800">MAX</span>':'';
+        return `<div class="hs-attempt"><div class="ha-num">${a.num}</div><div class="ha-dur">${a.lessThan?'<':''}${a.duration}s</div><div class="ha-tags">${mh}<span class="ha-tag ${kCls}">K${kN}</span>${ex}${dir}${q}${cl}</div></div>`;
+      }).join('')}</div></div>`;
+  }).join('');
+}
+
+function toggleDetail(d){document.getElementById('detail-'+d).classList.toggle('open')}
+
+async function seedHistoricalData(){
+  const check=await getSession('2026-01-31');
+  if(check&&check.attempts.length>0)return;
+  const data=[
+    {date:"2026-01-31",daysSinceLastSession:null,attempts:[{"num":1,"duration":1,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-01-31T07:00:00.000Z"},{"num":2,"duration":1,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-01-31T07:01:00.000Z"},{"num":3,"duration":8,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-01-31T07:02:00.000Z"},{"num":4,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"no","clean":"decent","time":"2026-01-31T07:03:00.000Z"},{"num":5,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-01-31T07:04:00.000Z"},{"num":6,"duration":1,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-01-31T07:05:00.000Z"},{"num":7,"duration":8,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"decent","time":"2026-01-31T07:06:00.000Z"},{"num":8,"duration":2,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-01-31T07:07:00.000Z"},{"num":9,"duration":8,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"kinda","clean":"decent","time":"2026-01-31T07:08:00.000Z"},{"num":10,"duration":11,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","maxHold":true,"time":"2026-01-31T07:09:00.000Z"}]},
+    {date:"2026-02-01",daysSinceLastSession:1,attempts:[{"num":1,"duration":3,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-01T07:00:00.000Z"},{"num":2,"duration":5,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-01T07:01:00.000Z"},{"num":3,"duration":1,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-01T07:02:00.000Z"},{"num":4,"duration":1,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-01T07:03:00.000Z"},{"num":5,"duration":3,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-01T07:04:00.000Z"},{"num":6,"duration":11,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-01T07:05:00.000Z"},{"num":7,"duration":3,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-01T07:06:00.000Z"},{"num":8,"duration":3,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-01T07:07:00.000Z"},{"num":9,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"kinda","clean":"decent","time":"2026-02-01T07:08:00.000Z"},{"num":10,"duration":2,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-01T07:09:00.000Z"},{"num":11,"duration":2,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-01T07:10:00.000Z"},{"num":12,"duration":30,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-01T07:11:00.000Z"}]},
+    {date:"2026-02-02",daysSinceLastSession:1,attempts:[{"num":1,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-02T07:00:00.000Z"},{"num":2,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-02T07:01:00.000Z"},{"num":3,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-02T07:02:00.000Z"},{"num":4,"duration":10,"lessThan":false,"kick":5,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-02T07:03:00.000Z"},{"num":5,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-02T07:04:00.000Z"},{"num":6,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-02T07:05:00.000Z"},{"num":7,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-02T07:06:00.000Z"},{"num":8,"duration":4,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-02T07:07:00.000Z"},{"num":9,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-02T07:08:00.000Z"},{"num":10,"duration":27,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-02T07:09:00.000Z"}]},
+    {date:"2026-02-03",daysSinceLastSession:1,attempts:[{"num":1,"duration":6,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"over","quietBalance":"kinda","clean":"","time":"2026-02-03T07:00:00.000Z"},{"num":2,"duration":1,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"garbage","time":"2026-02-03T07:01:00.000Z"},{"num":3,"duration":2,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"garbage","time":"2026-02-03T07:02:00.000Z"},{"num":4,"duration":3,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-03T07:03:00.000Z"},{"num":5,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-03T07:04:00.000Z"},{"num":6,"duration":3,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-03T07:05:00.000Z"},{"num":7,"duration":7,"lessThan":false,"kick":3,"exitType":"controlled","exitDir":"under","quietBalance":"kinda","clean":"decent","time":"2026-02-03T07:06:00.000Z"},{"num":8,"duration":11,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-03T07:07:00.000Z"},{"num":9,"duration":4,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-03T07:08:00.000Z"},{"num":10,"duration":3,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-03T07:09:00.000Z"},{"num":11,"duration":20,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"kinda","clean":"","maxHold":true,"time":"2026-02-03T07:10:00.000Z"}]},
+    {date:"2026-02-06",daysSinceLastSession:3,attempts:[{"num":1,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-06T07:00:00.000Z"},{"num":2,"duration":3,"lessThan":true,"kick":5,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-06T07:01:00.000Z"},{"num":3,"duration":5,"lessThan":false,"kick":3,"exitType":"controlled","exitDir":"under","quietBalance":"kinda","clean":"decent","time":"2026-02-06T07:02:00.000Z"},{"num":4,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-06T07:03:00.000Z"},{"num":5,"duration":18,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"no","clean":"","time":"2026-02-06T07:04:00.000Z"},{"num":6,"duration":6,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-06T07:05:00.000Z"},{"num":7,"duration":10,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"over","quietBalance":"yes","clean":"decent","time":"2026-02-06T07:06:00.000Z"},{"num":8,"duration":1,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-06T07:07:00.000Z"},{"num":9,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-06T07:08:00.000Z"},{"num":10,"duration":43,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-06T07:09:00.000Z"}]},
+    {date:"2026-02-07",daysSinceLastSession:1,attempts:[{"num":1,"duration":3,"lessThan":true,"kick":5,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-07T07:00:00.000Z"},{"num":2,"duration":12,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-07T07:01:00.000Z"},{"num":3,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-07T07:02:00.000Z"},{"num":4,"duration":13,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-07T07:03:00.000Z"},{"num":5,"duration":11,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-07T07:04:00.000Z"},{"num":6,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-07T07:05:00.000Z"},{"num":7,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-07T07:06:00.000Z"},{"num":8,"duration":4,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-07T07:07:00.000Z"},{"num":9,"duration":11,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-07T07:08:00.000Z"},{"num":10,"duration":43,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-07T07:09:00.000Z"}]},
+    {date:"2026-02-08",daysSinceLastSession:1,attempts:[{"num":1,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-08T07:00:00.000Z"},{"num":2,"duration":9,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"yes","clean":"decent","time":"2026-02-08T07:01:00.000Z"},{"num":3,"duration":3,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-08T07:02:00.000Z"},{"num":4,"duration":12,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-08T07:03:00.000Z"},{"num":5,"duration":3,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-08T07:04:00.000Z"},{"num":6,"duration":6,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-08T07:05:00.000Z"},{"num":7,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-08T07:06:00.000Z"},{"num":8,"duration":2,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-08T07:07:00.000Z"},{"num":9,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-08T07:08:00.000Z"},{"num":10,"duration":41,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-08T07:09:00.000Z"}]},
+    {date:"2026-02-09",daysSinceLastSession:1,attempts:[{"num":1,"duration":3,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-09T07:00:00.000Z"},{"num":2,"duration":3,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-09T07:01:00.000Z"},{"num":3,"duration":11,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-09T07:02:00.000Z"},{"num":4,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-09T07:03:00.000Z"},{"num":5,"duration":6,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"yes","clean":"decent","time":"2026-02-09T07:04:00.000Z"},{"num":6,"duration":3,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-09T07:05:00.000Z"},{"num":7,"duration":4,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-09T07:06:00.000Z"},{"num":8,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-09T07:07:00.000Z"},{"num":9,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-09T07:08:00.000Z"},{"num":10,"duration":15,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-09T07:09:00.000Z"}]},
+    {date:"2026-02-12",daysSinceLastSession:3,attempts:[{"num":1,"duration":4,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-12T07:00:00.000Z"},{"num":2,"duration":3,"lessThan":true,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-12T07:01:00.000Z"},{"num":3,"duration":1,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-12T07:02:00.000Z"},{"num":4,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"decent","time":"2026-02-12T07:03:00.000Z"},{"num":5,"duration":9,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"yes","clean":"decent","time":"2026-02-12T07:04:00.000Z"},{"num":6,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-12T07:05:00.000Z"},{"num":7,"duration":3,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-12T07:06:00.000Z"},{"num":8,"duration":11,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"no","clean":"","time":"2026-02-12T07:07:00.000Z"},{"num":9,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-12T07:08:00.000Z"},{"num":10,"duration":23,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-12T07:09:00.000Z"}]},
+    {date:"2026-02-13",daysSinceLastSession:1,attempts:[{"num":1,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-13T07:00:00.000Z"},{"num":2,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-13T07:01:00.000Z"},{"num":3,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-13T07:02:00.000Z"},{"num":4,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-13T07:03:00.000Z"},{"num":5,"duration":10,"lessThan":false,"kick":5,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-13T07:04:00.000Z"},{"num":6,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-13T07:05:00.000Z"},{"num":7,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-13T07:06:00.000Z"},{"num":8,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-13T07:07:00.000Z"},{"num":9,"duration":3,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-13T07:08:00.000Z"},{"num":10,"duration":8,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-13T07:09:00.000Z"}]},
+    {date:"2026-02-15",daysSinceLastSession:2,attempts:[{"num":1,"duration":10,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-15T07:00:00.000Z"},{"num":2,"duration":9,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"kinda","clean":"decent","time":"2026-02-15T07:01:00.000Z"},{"num":3,"duration":5,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-15T07:02:00.000Z"},{"num":4,"duration":1,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-15T07:03:00.000Z"},{"num":5,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-15T07:04:00.000Z"},{"num":6,"duration":3,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-15T07:05:00.000Z"},{"num":7,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-15T07:06:00.000Z"},{"num":8,"duration":5,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-15T07:07:00.000Z"},{"num":9,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-15T07:08:00.000Z"},{"num":10,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-02-15T07:09:00.000Z"},{"num":11,"duration":47,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"kinda","clean":"","maxHold":true,"time":"2026-02-15T07:10:00.000Z"}]},
+    {date:"2026-02-16",daysSinceLastSession:1,attempts:[{"num":1,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-16T07:00:00.000Z"},{"num":2,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-16T07:01:00.000Z"},{"num":3,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-16T07:02:00.000Z"},{"num":4,"duration":5,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-16T07:03:00.000Z"},{"num":5,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-16T07:04:00.000Z"},{"num":6,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"kinda","clean":"decent","time":"2026-02-16T07:05:00.000Z"},{"num":7,"duration":2,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-16T07:06:00.000Z"},{"num":8,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-16T07:07:00.000Z"},{"num":9,"duration":3,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-16T07:08:00.000Z"},{"num":10,"duration":13,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-16T07:09:00.000Z"}]},
+    {date:"2026-02-17",daysSinceLastSession:1,attempts:[{"num":1,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:00:00.000Z"},{"num":2,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-17T07:01:00.000Z"},{"num":3,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:02:00.000Z"},{"num":4,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:03:00.000Z"},{"num":5,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:04:00.000Z"},{"num":6,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-17T07:05:00.000Z"},{"num":7,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:06:00.000Z"},{"num":8,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:07:00.000Z"},{"num":9,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-17T07:08:00.000Z"},{"num":10,"duration":4,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:09:00.000Z"},{"num":11,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:10:00.000Z"},{"num":12,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-17T07:11:00.000Z"},{"num":13,"duration":31,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-17T07:12:00.000Z"}]},
+    {date:"2026-02-18",daysSinceLastSession:1,attempts:[{"num":1,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-18T07:00:00.000Z"},{"num":2,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-18T07:01:00.000Z"},{"num":3,"duration":8,"lessThan":false,"kick":3,"exitType":"controlled","exitDir":"under","quietBalance":"yes","clean":"decent","time":"2026-02-18T07:02:00.000Z"},{"num":4,"duration":13,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-18T07:03:00.000Z"},{"num":5,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-18T07:04:00.000Z"},{"num":6,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-18T07:05:00.000Z"},{"num":7,"duration":4,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-18T07:06:00.000Z"},{"num":8,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-18T07:07:00.000Z"},{"num":9,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-18T07:08:00.000Z"},{"num":10,"duration":2,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-18T07:09:00.000Z"},{"num":11,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-18T07:10:00.000Z"},{"num":12,"duration":32,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-18T07:11:00.000Z"}]},
+    {date:"2026-02-20",daysSinceLastSession:2,attempts:[{"num":1,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-20T07:00:00.000Z"},{"num":2,"duration":6,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"","clean":"","time":"2026-02-20T07:01:00.000Z"},{"num":3,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"no","clean":"","time":"2026-02-20T07:02:00.000Z"},{"num":4,"duration":4,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-20T07:03:00.000Z"},{"num":5,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-20T07:04:00.000Z"},{"num":6,"duration":5,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-20T07:05:00.000Z"},{"num":7,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","time":"2026-02-20T07:06:00.000Z"},{"num":8,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-20T07:07:00.000Z"},{"num":9,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-20T07:08:00.000Z"},{"num":10,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-20T07:09:00.000Z"},{"num":11,"duration":17,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-20T07:10:00.000Z"}]},
+    {date:"2026-02-21",daysSinceLastSession:1,attempts:[{"num":1,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:00:00.000Z"},{"num":2,"duration":6,"lessThan":false,"kick":3,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:01:00.000Z"},{"num":3,"duration":4,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-21T07:02:00.000Z"},{"num":4,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-21T07:03:00.000Z"},{"num":5,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:04:00.000Z"},{"num":6,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-21T07:05:00.000Z"},{"num":7,"duration":4,"lessThan":false,"kick":1,"exitType":"controlled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:06:00.000Z"},{"num":8,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:07:00.000Z"},{"num":9,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:08:00.000Z"},{"num":10,"duration":2,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-21T07:09:00.000Z"},{"num":11,"duration":2,"lessThan":true,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-21T07:10:00.000Z"},{"num":12,"duration":6,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:11:00.000Z"},{"num":13,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-21T07:12:00.000Z"},{"num":14,"duration":4,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:13:00.000Z"},{"num":15,"duration":3,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-21T07:14:00.000Z"},{"num":16,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-21T07:15:00.000Z"},{"num":17,"duration":15,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-21T07:16:00.000Z"}]},
+    {date:"2026-02-22",daysSinceLastSession:1,attempts:[{"num":1,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-22T07:00:00.000Z"},{"num":2,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-22T07:01:00.000Z"},{"num":3,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-02-22T07:02:00.000Z"},{"num":4,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-02-22T07:03:00.000Z"},{"num":5,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-22T07:04:00.000Z"},{"num":6,"duration":5,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-02-22T07:05:00.000Z"},{"num":7,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-22T07:06:00.000Z"},{"num":8,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-22T07:07:00.000Z"},{"num":9,"duration":10,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-02-22T07:08:00.000Z"},{"num":10,"duration":11,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-02-22T07:09:00.000Z"}]},
+    {date:"2026-03-02",daysSinceLastSession:8,attempts:[{"num":1,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-03-02T07:00:00.000Z"},{"num":2,"duration":3,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-03-02T07:01:00.000Z"},{"num":3,"duration":11,"lessThan":false,"kick":1,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-03-02T07:02:00.000Z"},{"num":4,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"perfect","time":"2026-03-02T07:03:00.000Z"},{"num":5,"duration":6,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-03-02T07:04:00.000Z"},{"num":6,"duration":2,"lessThan":true,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"garbage","time":"2026-03-02T07:05:00.000Z"},{"num":7,"duration":10,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"yes","clean":"decent","time":"2026-03-02T07:06:00.000Z"},{"num":8,"duration":5,"lessThan":false,"kick":1,"exitType":"uncontrolled","exitDir":"under","quietBalance":"no","clean":"","time":"2026-03-02T07:07:00.000Z"},{"num":9,"duration":3,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-03-02T07:08:00.000Z"},{"num":10,"duration":4,"lessThan":false,"kick":5,"exitType":"uncontrolled","exitDir":"over","quietBalance":"no","clean":"","time":"2026-03-02T07:09:00.000Z"},{"num":11,"duration":16,"lessThan":false,"kick":3,"exitType":"bailed","exitDir":"","quietBalance":"","clean":"","maxHold":true,"time":"2026-03-02T07:10:00.000Z"}]},
+  ];
+  for(const s of data){await saveSession(s)}
+  console.log('Historical data imported:',data.length,'sessions');
+}
+
+openDB().then(()=>seedHistoricalData().then(()=>initLog()));
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
