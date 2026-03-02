@@ -65,6 +65,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .detail-actions{display:flex;gap:8px;margin-top:10px}
 .detail-actions button{flex:1;padding:8px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
 .btn-delete{background:var(--red-bg);border:1px solid #fecaca;color:var(--red)}
+.btn-edit{background:var(--accent-bg);border:1px solid #cbd5e1;color:var(--accent);display:flex;align-items:center;justify-content:center;gap:4px}
 
 /* Form */
 .attempt-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
@@ -382,7 +383,7 @@ function renderAttemptDetail(num){
         <div class="detail-item"><div class="di-label">Clean</div><div class="di-value">${clean}</div></div>
         ${restHtml}${mh}
       </div>
-      <div class="detail-actions"><button class="btn-delete" onclick="deleteAttempt(${a.num})">Delete</button></div>
+      <div class="detail-actions"><button class="btn-edit" onclick="editAttempt(${a.num})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg> Edit</button><button class="btn-delete" onclick="deleteAttempt(${a.num})">Delete</button></div>
     </div>`;
 }
 
@@ -460,6 +461,88 @@ async function deleteAttempt(num){
   currentSession.attempts=currentSession.attempts.filter(a=>a.num!==num);
   currentSession.attempts.forEach((a,i)=>a.num=i+1);
   await saveSession(currentSession);viewingAttempt=null;renderLog();
+}
+
+let editingAttempt=null;
+function editAttempt(num){
+  const a=currentSession.attempts.find(x=>x.num===num);
+  if(!a)return;
+  editingAttempt=num;
+  formState={duration:a.duration,lessThan:a.lessThan||false,kick:a.kick||0,exitType:a.exitType||'',exitDir:a.exitDir||'',quietBalance:a.quietBalance||'',clean:a.clean||'',maxHold:a.maxHold||false};
+  viewingAttempt=null;
+  renderEditForm(num);
+}
+
+function renderEditForm(num){
+  const kickBtns=[1,2,3,4,5].map(n=>`<div class="kick-num ${formState.kick===n?'k'+n+' selected':''}" onclick="setKick(${n});renderEditForm(${num})">${n}</div>`).join('');
+  const showDir=formState.exitType&&formState.exitType!=='bailed';
+  const dirHtml=showDir?`<div class="field"><label>Exit direction</label><div class="yn-group">
+    <div class="yn-btn under ${formState.exitDir==='under'?'selected':''}" onclick="setDir('under');renderEditForm(${num})">Underbalance</div>
+    <div class="yn-btn over ${formState.exitDir==='over'?'selected':''}" onclick="setDir('over');renderEditForm(${num})">Overbalance</div>
+  </div></div>`:'';
+  document.getElementById('detail-area').innerHTML=`
+    <div class="attempt-form">
+      <h3><span>Edit #${num}</span><button style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;line-height:1" onclick="cancelEdit()">&times;</button></h3>
+      <div class="field"><label>Hold duration</label>
+        <div class="duration-row">
+          <div class="lessthan-toggle ${formState.lessThan?'selected':''}" onclick="toggleLT();renderEditForm(${num})">&le;</div>
+          <div class="duration-input"><input type="number" id="f-dur-edit" inputmode="decimal" placeholder="0" min="0" max="999" step="0.1" value="${formState.duration}"><span>sec</span></div>
+          <div class="quick-btn" onclick="formState.duration=10;renderEditForm(${num})">10s</div>
+        </div>
+      </div>
+      <div class="field"><label>Kick-up strength</label>
+        <div class="kick-wrapper">
+          <div class="kick-labels"><span>Soft</span><span>Hard</span></div>
+          <div class="kick-scale">${kickBtns}</div>
+        </div>
+      </div>
+      <div class="field"><label>Exit type</label><div class="yn-group">
+        <div class="yn-btn ctrl ${formState.exitType==='controlled'?'selected':''}" onclick="setExit('controlled');renderEditForm(${num})">Controlled</div>
+        <div class="yn-btn unctrl ${formState.exitType==='uncontrolled'?'selected':''}" onclick="setExit('uncontrolled');renderEditForm(${num})">Uncontrolled</div>
+        <div class="yn-btn bailed ${formState.exitType==='bailed'?'selected':''}" onclick="setExit('bailed');renderEditForm(${num})">Bailed</div>
+      </div></div>
+      ${dirHtml}
+      <div class="field"><label>Quiet balance found?</label><div class="yn-group">
+        <div class="yn-btn yes ${formState.quietBalance==='yes'?'selected':''}" onclick="setQB('yes');renderEditForm(${num})">Yes</div>
+        <div class="yn-btn kinda ${formState.quietBalance==='kinda'?'selected':''}" onclick="setQB('kinda');renderEditForm(${num})">Kind of</div>
+        <div class="yn-btn no ${formState.quietBalance==='no'?'selected':''}" onclick="setQB('no');renderEditForm(${num})">No</div>
+      </div></div>
+      <div class="field"><label>Clean (optional)</label><div class="clean-group">
+        <div class="clean-btn perfect ${formState.clean==='perfect'?'selected':''}" onclick="formState.clean=formState.clean==='perfect'?'':'perfect';renderEditForm(${num})">Perfect</div>
+        <div class="clean-btn decent ${formState.clean==='decent'?'selected':''}" onclick="formState.clean=formState.clean==='decent'?'':'decent';renderEditForm(${num})">Decent</div>
+        <div class="clean-btn garbage ${formState.clean==='garbage'?'selected':''}" onclick="formState.clean=formState.clean==='garbage'?'':'garbage';renderEditForm(${num})">Garbage</div>
+      </div></div>
+      <div class="maxhold-row"><label>Max hold attempt</label><label class="toggle-switch"><input type="checkbox" id="f-maxhold-edit" ${formState.maxHold?'checked':''} onchange="formState.maxHold=!formState.maxHold"><span class="toggle-track"></span></label></div>
+      <button class="btn-primary" onclick="saveEdit(${num})">Save changes</button>
+    </div>`;
+  document.getElementById('attempt-form-area').innerHTML='';
+  document.getElementById('f-dur-edit').addEventListener('input',e=>{formState.duration=e.target.value});
+}
+
+async function saveEdit(num){
+  const dur=Math.min(parseFloat(formState.duration),10);
+  if(!dur||dur<=0){showToast('Enter a duration');return}
+  if(!formState.kick){showToast('Select kick strength');return}
+  if(!formState.exitType){showToast('Select exit type');return}
+  if(formState.exitType!=='bailed'&&!formState.exitDir){showToast('Select exit direction');return}
+  if(!formState.quietBalance){showToast('Select quiet balance');return}
+  const a=currentSession.attempts.find(x=>x.num===num);
+  if(!a)return;
+  a.duration=dur;a.lessThan=formState.lessThan;a.kick=formState.kick;
+  a.exitType=formState.exitType;a.exitDir=formState.exitDir||'';
+  a.quietBalance=formState.quietBalance;a.clean=formState.clean||'';
+  a.maxHold=formState.maxHold||false;
+  await saveSession(currentSession);
+  editingAttempt=null;
+  formState={duration:'',lessThan:false,kick:0,exitType:'',exitDir:'',quietBalance:'',clean:'',maxHold:false};
+  viewingAttempt=num;renderLog();
+  showToast(`#${num} updated`);
+}
+
+function cancelEdit(){
+  editingAttempt=null;
+  formState={duration:'',lessThan:false,kick:0,exitType:'',exitDir:'',quietBalance:'',clean:'',maxHold:false};
+  viewingAttempt=null;renderLog();
 }
 
 async function renderStreak(){
