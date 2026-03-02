@@ -1,8 +1,8 @@
-const CACHE_NAME = 'handstand-v5';
+const CACHE_NAME = 'handstand-v6';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  './',
+  './index.html',
+  './manifest.json'
 ];
 
 self.addEventListener('install', e => {
@@ -29,6 +29,6 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         return response;
       });
-    }).catch(() => caches.match('/index.html'))
+    }).catch(() => caches.match(new URL('./', self.location).href))
   );
 });
