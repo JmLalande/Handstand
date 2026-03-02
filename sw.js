@@ -1,4 +1,4 @@
-const CACHE_NAME = 'handstand-v18';
+const CACHE_NAME = 'handstand-v20';
 const ASSETS = [
   './',
   './index.html',

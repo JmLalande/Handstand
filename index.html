@@ -582,7 +582,10 @@ function redrawChart(idx,S){
   } else if(idx===7){
     drawHeatmap('cc-calendar',S);
   } else if(idx===8){
-    const allA=S.flatMap(s=>{
+    // Only use sessions with real (non-uniform) timestamps
+    const realS=S.filter(s=>{if(s.attempts.length<2)return false;const gaps=[];for(let i=1;i<s.attempts.length;i++){if(!s.attempts[i].time||!s.attempts[i-1].time)return false;gaps.push(Math.round((new Date(s.attempts[i].time)-new Date(s.attempts[i-1].time))/1000))}return!gaps.every(g=>g===gaps[0])});
+    if(!realS.length){const c=document.getElementById('cc-restimpact');if(c)c.innerHTML='<div style="text-align:center;color:var(--text3);padding:80px 0;font-size:13px">No real rest data yet</div>';}
+    else{const allA=realS.flatMap(s=>{
       const rests=calcRest(s.attempts);
       return s.attempts.slice(1).map((a,i)=>({...a,rest:rests[i],cat:restCategory(rests[i],s.attempts[i])}));
     }).filter(a=>a.rest!==null);
@@ -591,7 +594,7 @@ function redrawChart(idx,S){
     const labels=['Success','Quiet','Clean'];
     const properVals=[pct(proper,isSuccess),pct(proper,isQuiet),pct(proper,a=>a.clean==='perfect'||a.clean==='decent')];
     const rushedVals=[pct(rushed,isSuccess),pct(rushed,isQuiet),pct(rushed,a=>a.clean==='perfect'||a.clean==='decent')];
-    drawGroupedBar('cc-restimpact',labels,[{data:properVals,color:'#16a34a',label:'Proper ('+proper.length+')'},{data:rushedVals,color:'#dc2626',label:'Rushed ('+rushed.length+')'}]);
+    drawGroupedBar('cc-restimpact',labels,[{data:properVals,color:'#16a34a',label:'Proper ('+proper.length+')'},{data:rushedVals,color:'#dc2626',label:'Rushed ('+rushed.length+')'}]);}
   }
 }
 
@@ -734,7 +737,7 @@ function drawTimeline(id,sessions){
   avgs.forEach((avg,i)=>{
     const x=pad.left+i*gap+gap/2;
     const h=(avg/maxD)*cH;
-    const color=avg>=10?'#16a34a':avg>=6?'#0d9488':'#dc2626';
+    const color=avg>=7.5?'#16a34a':avg>=5?'#eab308':avg>=2.5?'#ea580c':'#dc2626';
     ctx.fillStyle=color;ctx.beginPath();roundRect(ctx,x-barW/2,pad.top+cH-h,barW,h,4);ctx.fill();
     if(avg>0){ctx.fillStyle=color;ctx.font='700 9px Inter,sans-serif';ctx.textAlign='center';ctx.fillText(avg+'s',x,pad.top+cH-h-4)}
     ctx.fillStyle='#8c8580';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText('#'+nums[i],x,H-8);
@@ -781,7 +784,7 @@ function drawHeatmap(id,sessions){
   const el=document.getElementById(id);if(!el)return;
   const dateMap={};
   sessions.forEach(s=>{if(!s.attempts.length)return;const sR=s.attempts.filter(isSuccess).length/s.attempts.length;const qR=s.attempts.filter(isQuiet).length/s.attempts.length;dateMap[s.date]=(sR+qR)/2});
-  const today=new Date(),startDay=new Date(today);startDay.setDate(startDay.getDate()-16*7+1);
+  const today=new Date(),startDay=new Date(today.getFullYear(),0,1);
   while(startDay.getDay()!==1)startDay.setDate(startDay.getDate()-1);
   const dayLbl=['M','T','W','T','F','S','S'];
   const g='gap:4px';
@@ -790,23 +793,27 @@ function drawHeatmap(id,sessions){
   h+='<div style="display:grid;grid-template-columns:36px repeat(7,1fr);'+g+';align-items:center"><div></div>';
   dayLbl.forEach(l=>h+=`<div style="font-size:10px;color:var(--text3);font-weight:600;text-align:center">${l}</div>`);
   h+='</div>';
-  // Build week rows
-  const d=new Date(startDay);let prevM=-1;
+  // Build week rows into array, then reverse (newest on top)
+  const d=new Date(startDay);const weeks=[];
   while(d<=today){
     const weekStart=new Date(d);
-    const m=weekStart.getMonth();
-    let mLabel='';
-    if(m!==prevM){mLabel=weekStart.toLocaleDateString('en-US',{month:'short'});prevM=m}
-    h+=`<div style="display:grid;grid-template-columns:36px repeat(7,1fr);${g};align-items:center"><div style="font-size:10px;color:var(--text3);font-weight:500;text-align:right;padding-right:4px">${mLabel}</div>`;
+    let row='';
     for(let dow=0;dow<7;dow++){
-      if(d>today){h+=`<div style="aspect-ratio:1;border-radius:4px"></div>`;d.setDate(d.getDate()+1);continue}
+      if(d>today){row+=`<div style="aspect-ratio:1;border-radius:4px"></div>`;d.setDate(d.getDate()+1);continue}
       const ds=d.toISOString().slice(0,10),val=dateMap[ds];
       let bg=val===undefined?'var(--surface2)':val>=.6?'#16a34a':val>=.3?'#86efac':val>=0?'#0d948840':'var(--surface2)';
-      h+=`<div style="aspect-ratio:1;border-radius:4px;background:${bg}" title="${ds}"></div>`;
+      row+=`<div style="aspect-ratio:1;border-radius:4px;background:${bg}" title="${ds}"></div>`;
       d.setDate(d.getDate()+1);
     }
-    h+='</div>';
+    weeks.push({month:weekStart.getMonth(),row});
   }
+  weeks.reverse();
+  let prevM=-1;
+  weeks.forEach(w=>{
+    let mLabel='';
+    if(w.month!==prevM){mLabel=new Date(2026,w.month,1).toLocaleDateString('en-US',{month:'short'});prevM=w.month}
+    h+=`<div style="display:grid;grid-template-columns:36px repeat(7,1fr);${g};align-items:center"><div style="font-size:10px;color:var(--text3);font-weight:500;text-align:right;padding-right:4px">${mLabel}</div>${w.row}</div>`;
+  });
   // Legend
   h+='<div style="display:flex;gap:6px;align-items:center;margin-top:10px;justify-content:center">';
   h+='<span style="font-size:10px;color:var(--text3);font-weight:500">Low</span>';
