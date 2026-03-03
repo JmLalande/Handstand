@@ -239,7 +239,9 @@ function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,
 function getSession(d){return new Promise((res,rej)=>{const tx=db.transaction('sessions','readonly'),r=tx.objectStore('sessions').get(d);r.onsuccess=()=>res(r.result||null);r.onerror=rej})}
 function saveSession(s){return new Promise((res,rej)=>{const tx=db.transaction('sessions','readwrite');tx.objectStore('sessions').put(s);tx.oncomplete=()=>res();tx.onerror=rej})}
 function getAllSessions(){return new Promise((res,rej)=>{const tx=db.transaction('sessions','readonly'),r=tx.objectStore('sessions').getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=rej})}
-function todayStr(){return new Date().toISOString().slice(0,10)}
+function localISO(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function localTimeISO(d){d=d||new Date();return localISO(d)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0')}
+function todayStr(){return localISO()}
 function formatDate(s){return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}
 function formatDateShort(s){return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
 function daysBetween(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5)}
@@ -444,13 +446,14 @@ function setQD(v){formState.duration=v;renderAttemptForm()}
 function toggleMaxHold(){formState.maxHold=!formState.maxHold}
 
 async function logAttempt(){
-  const dur=Math.min(parseFloat(formState.duration),10);
+  const raw=parseFloat(formState.duration);
+  const dur=formState.maxHold?raw:Math.min(raw,10);
   if(!dur||dur<=0){showToast('Enter a duration');return}
   if(!formState.kick){showToast('Select kick strength');return}
   if(!formState.exitType){showToast('Select exit type');return}
   if(formState.exitType!=='bailed'&&!formState.exitDir){showToast('Select exit direction');return}
   if(!formState.quietBalance){showToast('Select quiet balance');return}
-  currentSession.attempts.push({num:currentSession.attempts.length+1,duration:dur,lessThan:formState.lessThan,kick:formState.kick,exitType:formState.exitType,exitDir:formState.exitDir||'',quietBalance:formState.quietBalance,clean:formState.clean||'',maxHold:formState.maxHold||false,time:new Date().toISOString()});
+  currentSession.attempts.push({num:currentSession.attempts.length+1,duration:dur,lessThan:formState.lessThan,kick:formState.kick,exitType:formState.exitType,exitDir:formState.exitDir||'',quietBalance:formState.quietBalance,clean:formState.clean||'',maxHold:formState.maxHold||false,time:localTimeISO()});
   await saveSession(currentSession);
   formState={duration:'',lessThan:false,kick:0,exitType:'',exitDir:'',quietBalance:'',clean:'',maxHold:false};
   viewingAttempt=null;renderLog();renderStreak();
@@ -520,7 +523,8 @@ function renderEditForm(num){
 }
 
 async function saveEdit(num){
-  const dur=Math.min(parseFloat(formState.duration),10);
+  const raw=parseFloat(formState.duration);
+  const dur=formState.maxHold?raw:Math.min(raw,10);
   if(!dur||dur<=0){showToast('Enter a duration');return}
   if(!formState.kick){showToast('Select kick strength');return}
   if(!formState.exitType){showToast('Select exit type');return}
@@ -549,8 +553,8 @@ async function renderStreak(){
   const sessions=await getAllSessions();
   const dates=new Set(sessions.filter(s=>s.attempts.length>0).map(s=>s.date));
   let streak=0,d=new Date();
-  if(dates.has(d.toISOString().slice(0,10))){streak=1;d.setDate(d.getDate()-1)}
-  while(dates.has(d.toISOString().slice(0,10))){streak++;d.setDate(d.getDate()-1)}
+  if(dates.has(localISO(d))){streak=1;d.setDate(d.getDate()-1)}
+  while(dates.has(localISO(d))){streak++;d.setDate(d.getDate()-1)}
   document.getElementById('streak-count').textContent=streak;
   document.getElementById('streak-badge').style.display=streak>0?'flex':'none';
 }
@@ -883,7 +887,7 @@ function drawHeatmap(id,sessions){
     let row='';
     for(let dow=0;dow<7;dow++){
       if(d>today){row+=`<div style="aspect-ratio:1;border-radius:4px"></div>`;d.setDate(d.getDate()+1);continue}
-      const ds=d.toISOString().slice(0,10),val=dateMap[ds];
+      const ds=localISO(d),val=dateMap[ds];
       let bg=val===undefined?'var(--surface2)':val>=.6?'#16a34a':val>=.3?'#86efac':val>=0?'#0d948840':'var(--surface2)';
       row+=`<div style="aspect-ratio:1;border-radius:4px;background:${bg}" title="${ds}"></div>`;
       d.setDate(d.getDate()+1);
