@@ -575,9 +575,9 @@ async function renderStats(){
   const el=document.getElementById('stats-content');
   if(!S.length){el.innerHTML='<div class="empty"><p>No data yet.</p></div>';return}
   const A=S.flatMap(s=>s.attempts),tA=A.length;
-  // Max hold avg: average of each session's longest attempt
-  const maxHolds=S.map(s=>Math.max(...s.attempts.map(a=>a.duration)));
-  const avgMax=(maxHolds.reduce((a,b)=>a+b,0)/maxHolds.length).toFixed(1);
+  // Max hold avg: average of attempts with maxHold toggle on
+  const maxAttempts=A.filter(a=>a.maxHold);
+  const avgMax=maxAttempts.length?(maxAttempts.reduce((s,a)=>s+a.duration,0)/maxAttempts.length).toFixed(1):'--';
   const quietPct=Math.round(A.filter(isQuiet).length/tA*100);
   const successPct=Math.round(A.filter(isSuccess).length/tA*100);
   const cleanPct=Math.round(A.filter(a=>a.clean==='perfect'||a.clean==='decent').length/tA*100);
