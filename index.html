@@ -322,7 +322,7 @@ async function initLog(){
 
 function renderLog(){
   document.getElementById('attempt-count').textContent=currentSession.attempts.length;
-  totalSlots=Math.max(DEFAULT_COUNT,currentSession.attempts.length);
+  totalSlots=Math.max(totalSlots,DEFAULT_COUNT,currentSession.attempts.length);
   renderBubbles();
   if(viewingAttempt!==null&&viewingAttempt<=currentSession.attempts.length){
     renderAttemptDetail(viewingAttempt);document.getElementById('attempt-form-area').innerHTML='';
@@ -350,7 +350,7 @@ function renderBubbles(){
 
 function viewAttempt(n){viewingAttempt=n;renderLog()}
 function showForm(){viewingAttempt=null;renderLog()}
-function addExtraSlot(){totalSlots++;viewingAttempt=null;renderLog()}
+function addExtraSlot(){totalSlots++;viewingAttempt=null;renderBubbles();document.getElementById('detail-area').innerHTML='';renderAttemptForm()}
 
 function renderAttemptDetail(num){
   const a=currentSession.attempts.find(x=>x.num===num);
